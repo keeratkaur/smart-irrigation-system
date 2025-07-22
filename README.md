@@ -68,6 +68,13 @@ compile.bat
 ...
 ```
 
+
+<img width="519" height="264" alt="image" src="https://github.com/user-attachments/assets/29b2ac10-2bb7-484a-961f-636a1329d2fd" />
+
+
+<img width="1086" height="939" alt="image" src="https://github.com/user-attachments/assets/0e24eca5-9665-4508-bdcb-760b768e2752" />
+
+
 ## Notes
 - For best color support, use a modern terminal (Linux/macOS Terminal, Windows Terminal, or MSYS2 MinGW shell)
 - If you see strange characters for the degree symbol, the code uses `C` for compatibility
