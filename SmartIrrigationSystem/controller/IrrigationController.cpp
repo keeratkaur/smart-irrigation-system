@@ -1,11 +1,11 @@
 #include "IrrigationController.h"
 
-IrrigationController::IrrigationController() : realTimeMode(false), delayMs(1000) {
+IrrigationController::IrrigationController() : realTimeMode(false), delayMs(1000), hour(8), minute(0), tickStep(30) {
     // Initial state is fine; sensors and pump default constructors
 }
 
 IrrigationController::IrrigationController(SoilMoistureSensor& sm, RainSensor& rain, WaterLevelSensor& wl, WaterPump& pump) 
-    : extSoilSensor(&sm), extRainSensor(&rain), extWaterLevelSensor(&wl), extPump(&pump), realTimeMode(false), delayMs(1000) {}
+    : extSoilSensor(&sm), extRainSensor(&rain), extWaterLevelSensor(&wl), extPump(&pump), realTimeMode(false), delayMs(1000), hour(8), minute(0), tickStep(30) {}
 
 void IrrigationController::setRealTimeMode(bool enabled, int delayMs) {
     this->realTimeMode = enabled;
@@ -17,12 +17,30 @@ void IrrigationController::setRealTimeMode(bool enabled, int delayMs) {
     }
 }
 
+void IrrigationController::advanceTime() {
+    minute += tickStep;
+    if (minute >= 60) {
+        hour += minute / 60;
+        minute = minute % 60;
+    }
+    if (hour >= 24) hour = hour % 24;
+}
+
+std::string IrrigationController::getTimeString() const {
+    std::ostringstream oss;
+    oss << "[" << std::setw(2) << std::setfill('0') << hour << ":"
+        << std::setw(2) << std::setfill('0') << minute << "]";
+    return oss.str();
+}
+
 void IrrigationController::tick() {
     // Use external sensors/pump if provided, else use internal
     SoilMoistureSensor& soil = extSoilSensor ? *extSoilSensor : soilSensor;
     RainSensor& rain = extRainSensor ? *extRainSensor : rainSensor;
     WaterLevelSensor& waterLevel = extWaterLevelSensor ? *extWaterLevelSensor : waterLevelSensor;
     WaterPump& pumpRef = extPump ? *extPump : pump;
+    AirTempSensor& airTemp = airTempSensor;
+    LightSensor& light = lightSensor;
 
     // Update sensors
     soil.setPumpState(pumpRef.isRunning());
@@ -30,10 +48,14 @@ void IrrigationController::tick() {
     soil.update();
     rain.update();
     waterLevel.update();
+    airTemp.update();
+    light.update();
 
     float soilVal = soil.getValue();
     bool raining = rain.isRaining();
     float waterLevelVal = waterLevel.getValue();
+    float airTempVal = airTemp.getValue();
+    float lightVal = light.getValue();
 
     // Irrigation logic
     if (soilVal < 40.0f && !raining && waterLevelVal > 10.0f) {
@@ -50,11 +72,17 @@ void IrrigationController::tick() {
         }
     }
 
-    // Log state with color coding
-    Logger::sensor("Soil: " + std::to_string(soilVal).substr(0, 5) + "% | " +
-                   "Rain: " + (raining ? "Yes" : "No") + " | " +
-                   "Water: " + std::to_string(waterLevelVal).substr(0, 5) + "% | " +
-                   "Pump: " + (pumpRef.isRunning() ? "ON" : "OFF"));
+    // Log state in requested format
+    std::ostringstream oss;
+    oss << getTimeString() << " SoilMoisture: " << int(soilVal) << "% | "
+        << "AirTemp: " << int(airTempVal) << " C | "
+        << "Rain: " << (raining ? "Yes" : "No") << " | "
+        << "Light: " << int(lightVal) << "lx | "
+        << "WaterLevel: " << int(waterLevelVal) << "% | "
+        << "Pump: " << (pumpRef.isRunning() ? "ON" : "OFF");
+    Logger::sensor(oss.str());
+
+    advanceTime();
 }
 
 void IrrigationController::setupNormalScenario() {
@@ -62,7 +90,10 @@ void IrrigationController::setupNormalScenario() {
     soilSensor = SoilMoistureSensor(50.0f);  // 50% moisture
     rainSensor = RainSensor(false);           // No rain
     waterLevelSensor = WaterLevelSensor(80.0f); // 80% water level
+    airTempSensor = AirTempSensor(24.0f);     // 24°C
+    lightSensor = LightSensor(800.0f);        // 800lx
     pump = WaterPump(false);                 // Pump off
+    hour = 8; minute = 0;
     Logger::success("Normal scenario setup complete - Moderate conditions");
 }
 
@@ -71,7 +102,10 @@ void IrrigationController::setupDroughtScenario() {
     soilSensor = SoilMoistureSensor(20.0f);  // Very dry soil
     rainSensor = RainSensor(false);           // No rain
     waterLevelSensor = WaterLevelSensor(60.0f); // Moderate water level
+    airTempSensor = AirTempSensor(32.0f);     // Hot
+    lightSensor = LightSensor(1000.0f);       // Bright
     pump = WaterPump(false);                 // Pump off initially
+    hour = 8; minute = 0;
     Logger::warning("Drought scenario setup complete - Very dry conditions");
 }
 
@@ -80,7 +114,10 @@ void IrrigationController::setupRainyScenario() {
     soilSensor = SoilMoistureSensor(60.0f);  // Moderate moisture
     rainSensor = RainSensor(true);            // Raining
     waterLevelSensor = WaterLevelSensor(90.0f); // High water level
+    airTempSensor = AirTempSensor(18.0f);     // Cool
+    lightSensor = LightSensor(300.0f);        // Dim
     pump = WaterPump(false);                 // Pump off (should stay off due to rain)
+    hour = 8; minute = 0;
     Logger::info("Rainy scenario setup complete - Wet conditions");
 }
 
@@ -89,7 +126,6 @@ void IrrigationController::simulateScenario(int steps) {
     for (int i = 0; i < steps; ++i) {
         Logger::info("Tick " + std::to_string(i+1) + ": ");
         tick();
-        
         // Add real-time delay if enabled
         if (realTimeMode) {
             std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
