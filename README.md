@@ -49,9 +49,18 @@ chmod +x compile.sh
 ```
 
 ### Windows (cmd/PowerShell)
+
 ```sh
 compile.bat
 ```
+
+- The batch script will:
+  - Automatically install MSYS2 (if not already installed) using winget.
+  - Install or update the GCC (g++) compiler inside MSYS2.
+  - Add the MSYS2 MinGW-w64 bin directory to your PATH.
+  - Attempt to delete any locked `main.exe` before compiling.
+- If you see a warning about `main.exe` being locked, ensure it is not running and try again.
+- After the first run, you may need to restart your terminal for PATH changes to take effect.
 
 - Requires a C++17 compiler (g++ 7+, clang 6+, MSVC 2017+)
 - No external dependencies
@@ -71,6 +80,13 @@ compile.bat
 
 
 <img width="1086" height="939" alt="image" src="https://github.com/user-attachments/assets/86850d58-ffdf-4c86-ab55-3badf96d3337" />
+
+
+
+<img width="519" height="264" alt="image" src="https://github.com/user-attachments/assets/29b2ac10-2bb7-484a-961f-636a1329d2fd" />
+
+
+<img width="1086" height="939" alt="image" src="https://github.com/user-attachments/assets/0e24eca5-9665-4508-bdcb-760b768e2752" />
 
 
 ## Notes
