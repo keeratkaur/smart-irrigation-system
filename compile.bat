@@ -5,7 +5,7 @@ REM --------------------------------------------------
 
 REM 1) Check for g++
 where g++ >nul 2>nul
-if %ERRORLEVEL%==0 goto compile
+if %ERRORLEVEL%==0 goto precompile
 
 REM 2) g++ missing – ensure MSYS2 present
 if exist "C:\msys64\usr\bin\bash.exe" (
@@ -39,6 +39,20 @@ setx PATH "%PATH%" >nul
 echo.
 echo g++ should now be available. You can re-open this terminal if needed.
 echo.
+goto precompile
+
+:precompile
+REM Try to delete main.exe if it exists (to avoid permission denied)
+if exist main.exe (
+    del /f main.exe
+    if exist main.exe (
+        echo.
+        echo WARNING: Could not delete main.exe. Please close any running instance and try again.
+        pause
+        exit /b 1
+    )
+)
+
 goto compile
 
 :compile
