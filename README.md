@@ -76,10 +76,6 @@ compile.bat
 [SENSOR] [08:30] SoilMoisture: 48% | AirTemp: 23 C | Rain: No | Light: 774lx | WaterLevel: 80% | Pump: OFF
 ...
 ```
-<img width="519" height="264" alt="image" src="https://github.com/user-attachments/assets/c3316d1c-43a2-4b56-9636-8a30bf0ce951" />
-
-
-<img width="1086" height="939" alt="image" src="https://github.com/user-attachments/assets/86850d58-ffdf-4c86-ab55-3badf96d3337" />
 
 
 
