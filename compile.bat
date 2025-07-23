@@ -1,28 +1,74 @@
 @echo off
+REM --------------------------------------------------
+REM compile.bat – installs/updates MSYS2 & GCC then compiles
+REM --------------------------------------------------
+
+REM 1) Check for g++
 where g++ >nul 2>nul
-if %ERRORLEVEL%==0 (
-    goto compile
+if %ERRORLEVEL%==0 goto compile
+
+REM 2) g++ missing – ensure MSYS2 present
+if exist "C:\msys64\usr\bin\bash.exe" (
+    echo MSYS2 found; skipping installation.
+) else (
+    echo MSYS2 not found. Attempting installation via winget...
+    winget install -e --id MSYS2.MSYS2 --accept-package-agreements --accept-source-agreements
+    if %ERRORLEVEL% neq 0 (
+        echo WARNING: winget install failed. If you have MSYS2 installed manually, this is OK.
+    )
+    if not exist "C:\msys64\usr\bin\bash.exe" (
+        echo.
+        echo ERROR: MSYS2 still not detected.
+        echo Please install it manually from https://www.msys2.org and re-run this script.
+        pause
+        exit /b 1
+    )
 )
 
-echo g++ not found. Installing MSYS2 (which provides g++) using winget...
-winget install -e --id MSYS2.MSYS2
+REM 3) Update & install GCC in MSYS2
+echo Installing / updating GCC toolchain in MSYS2...
+"C:\msys64\usr\bin\bash.exe" -lc "pacman -Syu --noconfirm"
+"C:\msys64\usr\bin\bash.exe" -lc "pacman -Sy --noconfirm mingw-w64-x86_64-gcc"
+
+REM 4) Add MinGW‑w64 bin to PATH for this session
+set "PATH=%PATH%;C:\msys64\mingw64\bin"
+
+REM 5) Persist PATH to your user environment
+setx PATH "%PATH%" >nul
 
 echo.
-echo MSYS2 has been installed.
-echo To install g++ (mingw-w64), please run the following in the MSYS2 MinGW terminal:
-echo     pacman -S --noconfirm mingw-w64-x86_64-gcc
+echo g++ should now be available. You can re-open this terminal if needed.
 echo.
-echo After installation, restart your terminal or add the MSYS2 MinGW bin directory to your PATH.
-pause
-exit /b 1
+goto compile
 
 :compile
-g++ -std=c++17 -ISmartIrrigationSystem -ISmartIrrigationSystem/sensors -ISmartIrrigationSystem/controller -ISmartIrrigationSystem/actuators -ISmartIrrigationSystem/utils SmartIrrigationSystem/main.cpp SmartIrrigationSystem/controller/IrrigationController.cpp SmartIrrigationSystem/sensors/SoilMoistureSensor.cpp SmartIrrigationSystem/sensors/RainSensor.cpp SmartIrrigationSystem/sensors/WaterLevelSensor.cpp SmartIrrigationSystem/sensors/AirTempSensor.cpp SmartIrrigationSystem/sensors/LightSensor.cpp SmartIrrigationSystem/actuators/WaterPump.cpp SmartIrrigationSystem/utils/Logger.cpp -o main.exe
+echo Compiling Smart Irrigation System...
+g++ -std=c++17 ^
+    -ISmartIrrigationSystem ^
+    -ISmartIrrigationSystem/sensors ^
+    -ISmartIrrigationSystem/controller ^
+    -ISmartIrrigationSystem/actuators ^
+    -ISmartIrrigationSystem/utils ^
+    SmartIrrigationSystem/main.cpp ^
+    SmartIrrigationSystem/controller/IrrigationController.cpp ^
+    SmartIrrigationSystem/sensors/SoilMoistureSensor.cpp ^
+    SmartIrrigationSystem/sensors/RainSensor.cpp ^
+    SmartIrrigationSystem/sensors/WaterLevelSensor.cpp ^
+    SmartIrrigationSystem/sensors/AirTempSensor.cpp ^
+    SmartIrrigationSystem/sensors/LightSensor.cpp ^
+    SmartIrrigationSystem/actuators/WaterPump.cpp ^
+    SmartIrrigationSystem/utils/Logger.cpp ^
+    -o main.exe
+
 if %ERRORLEVEL% EQU 0 (
+    echo.
     echo Compilation successful!
-    echo Running the program...
+    echo Running program...
     main.exe
 ) else (
+    echo.
     echo Compilation failed!
 )
+
 pause
+exit /b
